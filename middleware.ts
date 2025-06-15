@@ -4,16 +4,26 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Redirect to login if not authenticated
-  if (!user && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/signup')) {
+  // Define protected routes
+  const protectedRoutes = ['/book', '/my-bookings', '/settings']
+  const isProtectedRoute = protectedRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
+
+  // Define auth routes
+  const authRoutes = ['/login', '/signup']
+  const isAuthRoute = authRoutes.includes(request.nextUrl.pathname)
+
+  // Redirect to login if trying to access protected route without auth
+  if (isProtectedRoute && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect to dashboard if authenticated and trying to access auth pages
-  if (user && (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup'))) {
+  // Redirect to dashboard if logged in and trying to access auth route
+  if (isAuthRoute && user) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 

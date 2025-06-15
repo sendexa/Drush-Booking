@@ -2,7 +2,7 @@
 import { createClient } from './server'
 
 export async function getBookingStats(userId: string) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const [
     { count: totalBookings },
@@ -34,7 +34,7 @@ export async function getBookingStats(userId: string) {
 }
 
 export async function getRecentBookings(userId: string, limit = 5) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data: bookings } = await supabase
     .from('bookings')
