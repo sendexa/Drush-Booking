@@ -64,6 +64,7 @@ const AppSidebar: React.FC = () => {
       subItems: [
         { name: "Profile", path: "/settings/profile" },
         { name: "Change Password", path: "/settings/security" },
+        { name: "Report Problem", path: "/report-problem" },
       ],
     },
     {
