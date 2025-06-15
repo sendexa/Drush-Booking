@@ -7,17 +7,40 @@ export type BookingStatus = 'pending' | 'confirmed' | 'cancelled'
 /**
  * Booking record from the 'bookings' table
  */
-export type Booking = {
+// export type Booking = {
+//   id: string
+//   user_id: string
+//   room_type: string
+//   check_in_date: string
+//   check_out_date: string
+//   guests: number
+//   status: BookingStatus
+//   created_at: string
+//   updated_at?: string | null
+//   special_requests?: string | null
+// }
+
+
+// types/booking.ts
+export interface Booking {
   id: string
   user_id: string
+  room_id: string
   room_type: string
   check_in_date: string
   check_out_date: string
   guests: number
-  status: BookingStatus
+  total_price: number
+  status: 'confirmed' | 'pending' | 'cancelled'
+  special_requests?: string | null
   created_at: string
   updated_at?: string | null
-  special_requests?: string | null
+}
+
+export interface BookingWithRoom extends Booking {
+  rooms: {
+    image_urls: string[]
+  } | null
 }
 
 /**

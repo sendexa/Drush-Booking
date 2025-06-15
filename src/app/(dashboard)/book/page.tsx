@@ -18,10 +18,13 @@ export default async function BookPage() {
   const defaultCheckOut = new Date()
   defaultCheckOut.setDate(defaultCheckOut.getDate() + 2)
 
+  
   const availableRooms = await getAvailableRooms(
     defaultCheckIn.toISOString(),
     defaultCheckOut.toISOString()
   )
+
+  
 
   return (
     <div className="flex min-h-screen flex-col p-4 md:p-8">

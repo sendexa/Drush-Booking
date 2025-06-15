@@ -2,58 +2,79 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
-import { ChevronDownIcon, HorizontaLDots } from "../icons/index";
+import {  HorizontaLDots } from "../icons/index";
+import { createClient } from "@/utils/supabase/client";
+import { toast } from "sonner";
 
 import {
-  // LockKeyhole,
-  House,
+
+ 
   UserCog,
   CalendarCheck,
   LogOut,
+  ChevronDownIcon,
+  LayoutGrid,
 } from "lucide-react";
 
 type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
+  action?: () => void;
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
-
-const navItems: NavItem[] = [
-  {
-    icon: <House />,
-    name: "Dashboard",
-    path: "/",
-  },
-  {
-    icon: <CalendarCheck />,
-    name: "Bookings",
-    subItems: [
-      { name: "Book a Room", path: "/book" },
-      { name: "My Bookings", path: "/my-bookings" },
-    ],
-  },
-  {
-    icon: <UserCog />,
-    name: "Settings",
-    subItems: [
-      { name: "Profile", path: "/settings/profile" },
-      { name: "Change Password", path: "/settings/security" },
-    ],
-  },
-  {
-    icon: <LogOut />,
-    name: "Logout",
-    path: "/logout",
-  },
-];
-
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleLogout = useCallback(async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error('Logout failed', {
+        description: error.message
+      });
+    } else {
+      router.push('/login');
+      toast.success('Logged out successfully');
+    }
+  }, [supabase, router]);
+
+  const navItems: NavItem[] = React.useMemo(() => [
+    {
+      icon: <LayoutGrid />,
+      name: "Dashboard",
+      path: "/",
+    },
+    {
+      icon: <CalendarCheck />,
+      name: "Bookings",
+      subItems: [
+        { name: "Book a Room", path: "/book" },
+        { name: "My Bookings", path: "/my-bookings" },
+      ],
+    },
+    {
+      icon: <UserCog />,
+      name: "Settings",
+      subItems: [
+        { name: "Profile", path: "/settings/profile" },
+        { name: "Change Password", path: "/settings/security" },
+      ],
+    },
+    {
+      icon: <LogOut className="w-5 h-5" />,
+      name: "Logout",
+      path: "/logout",
+      action: handleLogout,
+    },
+   
+  ], [handleLogout]);
+
 
   const renderMenuItems = (
     navItems: NavItem[],
@@ -217,7 +238,7 @@ const AppSidebar: React.FC = () => {
     if (!submenuMatched) {
       setOpenSubmenu(null);
     }
-  }, [pathname, isActive]);
+  }, [pathname, isActive, navItems]);
 
   useEffect(() => {
     // Set the height of the submenu items when the submenu is opened
