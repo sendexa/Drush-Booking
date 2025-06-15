@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { createClient } from '@/utils/supabase/client'
+import { Loader2 } from 'lucide-react'
 
 const formSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -140,7 +141,14 @@ export default function SignupForm() {
         />
 
         <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-          Create account
+          {form.formState.isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating account...
+            </>
+          ) : (
+            'Create account'
+          )}
         </Button>
 
         <div className="text-center text-sm text-gray-600">

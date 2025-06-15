@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { createClient } from '@/utils/supabase/client'
+import { Loader2 } from 'lucide-react'
 
 const formSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -82,7 +83,14 @@ export default function LoginForm() {
         />
 
         <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-          Log in
+          {form.formState.isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Logging in...
+            </>
+          ) : (
+            'Log in'
+          )}
         </Button>
 
         <div className="text-center text-sm text-gray-600">
