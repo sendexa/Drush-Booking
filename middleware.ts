@@ -1,5 +1,5 @@
 // middleware.ts
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/supabase/client'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
