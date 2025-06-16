@@ -1,4 +1,3 @@
-
 // app/settings/profile/page.tsx
 'use client'
 
@@ -11,6 +10,13 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
+import { format } from 'date-fns'
+import { Camera, Mail, Phone, User, Calendar } from 'lucide-react'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 
 export default function ProfileSettings() {
   const supabase = createClient()
@@ -20,10 +26,14 @@ export default function ProfileSettings() {
     full_name: '',
     email: '',
     phone: '',
-    avatar_url: ''
+    avatar_url: '',
+    created_at: '',
+    last_sign_in: '',
+    email_verified: false
   })
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState('')
+  const [activeTab, setActiveTab] = useState('profile')
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -44,7 +54,12 @@ export default function ProfileSettings() {
         console.error('Error fetching profile:', error)
         toast.error('Failed to load profile data')
       } else if (data) {
-        setProfile(data)
+        setProfile({
+          ...data,
+          email: user.email || '',
+          email_verified: user.email_confirmed_at !== null,
+          last_sign_in: user.last_sign_in_at || ''
+        })
         if (data.avatar_url) {
           setAvatarPreview(data.avatar_url)
         }
@@ -63,6 +78,19 @@ export default function ProfileSettings() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should be less than 5MB')
+        return
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload an image file')
+        return
+      }
+
       setAvatarFile(file)
       setAvatarPreview(URL.createObjectURL(file))
     }
@@ -114,7 +142,6 @@ export default function ProfileSettings() {
             .from('profiles')
             .update({
               full_name: profile.full_name,
-              email: profile.email,
               phone: profile.phone,
               avatar_url: avatarUrl,
               updated_at: new Date().toISOString()
@@ -141,7 +168,7 @@ export default function ProfileSettings() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto p-6 space-y-6">
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
         <div className="space-y-2">
           <Skeleton className="h-8 w-32" />
           <Skeleton className="h-4 w-64" />
@@ -160,84 +187,188 @@ export default function ProfileSettings() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-bold">Profile Settings</h1>
-        <p className="text-gray-500">
-          Update your personal information and avatar
+        <p className="text-muted-foreground">
+          Manage your account settings and preferences
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="flex items-center gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="avatar">Avatar</Label>
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={avatarPreview} />
-                <AvatarFallback>
-                  {profile.full_name.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <input
-                id="avatar"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="hidden"
-              />
-              <Label
-                htmlFor="avatar"
-                className="cursor-pointer text-sm font-medium text-primary hover:text-primary/80"
-              >
-                Change
-              </Label>
-            </div>
-          </div>
-        </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="account">Account</TabsTrigger>
+        </TabsList>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="full_name">Full Name</Label>
-            <Input
-              id="full_name"
-              name="full_name"
-              value={profile.full_name}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
+        <TabsContent value="profile" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Personal Information</CardTitle>
+              <CardDescription>
+                Update your personal details and profile picture
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="flex items-center gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="avatar">Profile Picture</Label>
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-20 w-20">
+                        <AvatarImage src={avatarPreview} />
+                        <AvatarFallback>
+                          {profile.full_name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="space-y-2">
+                        <input
+                          id="avatar"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarChange}
+                          className="hidden"
+                        />
+                        <Label
+                          htmlFor="avatar"
+                          className="cursor-pointer inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
+                        >
+                          <Camera className="h-4 w-4" />
+                          Change Photo
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          JPG, GIF or PNG. Max size of 5MB.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              value={profile.email}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="full_name" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Full Name
+                    </Label>
+                    <Input
+                      id="full_name"
+                      name="full_name"
+                      value={profile.full_name}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              value={profile.phone || ''}
-              onChange={handleInputChange}
-            />
-          </div>
-        </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Phone Number
+                    </Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={profile.phone || ''}
+                      onChange={handleInputChange}
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+                </div>
 
-        <div className="flex justify-end">
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </div>
-      </form>
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => router.back()}
+                    disabled={loading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={loading}>
+                    {loading ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="account" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Information</CardTitle>
+              <CardDescription>
+                View your account details and status
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">Email Address</p>
+                      <p className="text-sm text-muted-foreground">{profile.email}</p>
+                    </div>
+                  </div>
+                  <Badge variant={profile.email_verified ? "default" : "secondary"}>
+                    {profile.email_verified ? "Verified" : "Unverified"}
+                  </Badge>
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Member Since</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(profile.created_at), 'MMMM d, yyyy')}
+                    </p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Last Sign In</p>
+                    <p className="text-sm text-muted-foreground">
+                      {profile.last_sign_in 
+                        ? format(new Date(profile.last_sign_in), 'MMMM d, yyyy h:mm a')
+                        : 'Never'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">Delete Account</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your account
+                        and remove your data from our servers.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction className="bg-destructive text-destructive-foreground">
+                        Delete Account
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

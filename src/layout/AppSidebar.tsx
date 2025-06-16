@@ -16,6 +16,7 @@ import {
   LogOut,
   ChevronDownIcon,
   LayoutGrid,
+  HelpCircle,
 } from "lucide-react";
 
 type NavItem = {
@@ -64,8 +65,13 @@ const AppSidebar: React.FC = () => {
       subItems: [
         { name: "Profile", path: "/settings/profile" },
         { name: "Change Password", path: "/settings/security" },
-        { name: "Report Problem", path: "/report-problem" },
+        // { name: "Report Problem", path: "/report-problem" },
       ],
+    },
+    {
+      icon: <HelpCircle className="w-5 h-5" />,
+      name: "Report Problem",
+      path: "/support/report",
     },
     {
       icon: <LogOut className="w-5 h-5" />,

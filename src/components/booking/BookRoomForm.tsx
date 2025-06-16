@@ -22,7 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, BedDouble, Users } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -34,8 +34,11 @@ import {
 } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
-import { Room } from "@/utils/supabase/rooms";
+import { getAvailableRooms, Room } from "@/utils/supabase/rooms";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent } from "@/components/ui/card";
+import Image from "next/image";
+import { Badge } from "@/components/ui/badge";
 
 const formSchema = z
   .object({
@@ -98,34 +101,31 @@ export default function BookRoomForm({
     "roomType",
   ]);
 
-  useEffect(() => {
-    const fetchAvailableRooms = async () => {
-      if (checkInDate && checkOutDate) {
-        const { data, error } = await supabase.rpc("get_available_rooms", {
-          p_check_in_date: checkInDate.toISOString(),
-          p_check_out_date: checkOutDate.toISOString(),
-        });
 
-        if (error) {
-          console.error("Error fetching rooms:", error);
-          return;
-        }
 
-        if (data) {
-          setFilteredRooms(data);
-          // Reset selection if previously selected room is no longer available
-          if (
-            roomType &&
-            !data.some((room: Room) => room.room_type === roomType)
-          ) {
-            form.setValue("roomType", "");
-          }
+// In your BookRoomForm.tsx
+useEffect(() => {
+  const fetchAvailableRooms = async () => {
+    if (checkInDate && checkOutDate) {
+      try {
+        const availableRooms = await getAvailableRooms(
+          checkInDate.toISOString(),
+          checkOutDate.toISOString()
+        );
+        
+        setFilteredRooms(availableRooms);
+        if (roomType && !availableRooms.some(room => room.room_type === roomType)) {
+          form.setValue("roomType", "");
         }
+      } catch (error) {
+        console.error("Error fetching rooms:", error);
+        toast.error("Error checking room availability");
       }
-    };
+    }
+  };
 
-    fetchAvailableRooms();
-  }, [checkInDate, checkOutDate, supabase, form, roomType]);
+  fetchAvailableRooms();
+}, [checkInDate, checkOutDate, form, roomType]);
 
   // Calculate price when room or dates change
   useEffect(() => {
@@ -202,219 +202,305 @@ export default function BookRoomForm({
     }
   }
 
+  const selectedRoom = filteredRooms.find(
+    (room) => room.room_type === roomType
+  );
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Check-in Date */}
+    <div className="space-y-8">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          {/* Room Selection */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Select Your Room</h3>
+            <FormField
+              control={form.control}
+              name="roomType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Room Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a room type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {filteredRooms.map((room) => (
+                        <SelectItem
+                          key={room.id}
+                          value={room.room_type}
+                          disabled={room.available_quantity <= 0}
+                        >
+                          {room.room_type} - ${room.price_per_night}/night
+                          {room.available_quantity <= 0 && " (Sold out)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Selected Room Preview */}
+          {selectedRoom && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Room Image */}
+                  <div className="relative h-48 md:h-full rounded-lg overflow-hidden">
+                    <Image
+                      src={selectedRoom.image_urls[0] || '/placeholder-room.jpg'}
+                      alt={selectedRoom.room_type}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+
+                  {/* Room Details */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">{selectedRoom.room_type}</h3>
+                      <p className="text-sm text-muted-foreground">{selectedRoom.description}</p>
+                    </div>
+
+                    {/* Amenities */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Amenities</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedRoom.amenities.map((amenity) => (
+                          <Badge key={amenity} variant="secondary">
+                            {amenity}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Room Info */}
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <BedDouble className="h-4 w-4 text-muted-foreground" />
+                        <span>Sleeps {selectedRoom.capacity}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span>Max {selectedRoom.capacity} guests</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Dates and Guests */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FormField
+              control={form.control}
+              name="checkInDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Check-in Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) =>
+                          date < new Date(new Date().setHours(0, 0, 0, 0))
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="checkOutDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Check-out Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) =>
+                          date <= form.getValues("checkInDate") ||
+                          date < new Date(new Date().setHours(0, 0, 0, 0))
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="guests"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Number of Guests</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={selectedRoom?.capacity || 6}
+                      value={field.value}
+                      onChange={(e) => field.onChange(parseInt(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Special Requests */}
           <FormField
             control={form.control}
-            name="checkInDate"
+            name="specialRequests"
             render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Check-in Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) =>
-                        date < new Date(new Date().setHours(0, 0, 0, 0))
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Check-out Date */}
-          <FormField
-            control={form.control}
-            name="checkOutDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Check-out Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) =>
-                        date <= form.getValues("checkInDate") ||
-                        date < new Date(new Date().setHours(0, 0, 0, 0))
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Room Type Selection */}
-        <FormField
-          control={form.control}
-          name="roomType"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Room Type</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <FormItem>
+                <FormLabel>Special Requests (Optional)</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a room type" />
-                  </SelectTrigger>
+                  <Input
+                    placeholder="Any special requirements or preferences..."
+                    {...field}
+                  />
                 </FormControl>
-                <SelectContent>
-                  {filteredRooms.map((room) => (
-                    <SelectItem
-                      key={room.id}
-                      value={room.room_type}
-                      disabled={room.available_quantity <= 0}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Price Summary */}
+          {totalPrice > 0 && (
+            <Card>
+              <CardContent className="pt-6">
+                <h3 className="font-semibold mb-4">Price Summary</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Room rate per night</span>
+                    <span>${selectedRoom?.price_per_night.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Number of nights</span>
+                    <span>
+                      {Math.ceil(
+                        (checkOutDate.getTime() - checkInDate.getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      )}
+                    </span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between font-semibold">
+                    <span>Total Price</span>
+                    <span>${totalPrice.toFixed(2)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Payment Options */}
+          <FormField
+            control={form.control}
+            name="paymentOption"
+            render={({ field }) => {
+              const depositAmount = totalPrice * 0.5;
+              const balanceDue = totalPrice - depositAmount;
+
+              return (
+                <FormItem className="space-y-3">
+                  <FormLabel>Payment Option</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex flex-col space-y-1"
                     >
-                      {room.room_type} - ${room.price_per_night}/night
-                      {room.available_quantity <= 0 && " (Sold out)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="full" />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          Pay Full Amount (${totalPrice.toFixed(2)})
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="half" />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          Pay 50% Deposit (${depositAmount.toFixed(2)})
+                          {totalPrice > 0 && (
+                            <span className="text-sm text-muted-foreground ml-1">
+                              (Balance of ${balanceDue.toFixed(2)} due at
+                              check-in)
+                            </span>
+                          )}
+                        </FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
 
-        {/* Number of Guests */}
-        <FormField
-          control={form.control}
-          name="guests"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Number of Guests</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min={1}
-                  max={6}
-                  value={field.value}
-                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Special Requests */}
-        <FormField
-          control={form.control}
-          name="specialRequests"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Special Requests (Optional)</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Any special requirements or preferences..."
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Payment Options */}
-        <FormField
-          control={form.control}
-          name="paymentOption"
-          render={({ field }) => {
-            const depositAmount = totalPrice * 0.5;
-            const balanceDue = totalPrice - depositAmount;
-
-            return (
-              <FormItem className="space-y-3">
-                <FormLabel>Payment Option</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    className="flex flex-col space-y-1"
-                  >
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="full" />
-                      </FormControl>
-                      <FormLabel className="font-normal">
-                        Pay Full Amount (${totalPrice.toFixed(2)})
-                      </FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="half" />
-                      </FormControl>
-                      <FormLabel className="font-normal">
-                        Pay 50% Deposit (${depositAmount.toFixed(2)})
-                        {totalPrice > 0 && (
-                          <span className="text-sm text-gray-500 ml-1">
-                            (Balance of ${balanceDue.toFixed(2)} due at
-                            check-in)
-                          </span>
-                        )}
-                      </FormLabel>
-                    </FormItem>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            );
-          }}
-        />
-
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Processing..." : "Confirm Booking"}
-        </Button>
-      </form>
-    </Form>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "Processing..." : "Confirm Booking"}
+          </Button>
+        </form>
+      </Form>
+    </div>
   );
 }

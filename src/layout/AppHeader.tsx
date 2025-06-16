@@ -2,7 +2,7 @@
 import { useSidebar } from "@/context/SidebarContext";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -11,19 +11,41 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/context/ThemeContext";
+import {
+  Bell,
+  Menu,
+  Moon,
+  Search,
+  Settings,
+  Sun,
+  User,
+  LogOut,
+} from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const AppHeader: React.FC = () => {
-  const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
   const [profile, setProfile] = useState({
     avatar_url: '',
-    full_name: ''
+    full_name: '',
+    email: ''
   });
+  const [searchQuery, setSearchQuery] = useState("");
   const { toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { theme, toggleTheme } = useTheme();
   const supabase = createClient();
   const router = useRouter();
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -32,7 +54,7 @@ const AppHeader: React.FC = () => {
 
       const { data } = await supabase
         .from('profiles')
-        .select('avatar_url, full_name')
+        .select('avatar_url, full_name, email')
         .eq('id', user.id)
         .single();
 
@@ -52,8 +74,11 @@ const AppHeader: React.FC = () => {
     }
   };
 
-  const toggleApplicationMenu = () => {
-    setApplicationMenuOpen(!isApplicationMenuOpen);
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
   const handleLogout = async () => {
@@ -69,25 +94,12 @@ const AppHeader: React.FC = () => {
   };
 
   const handleReportProblem = () => {
-    // Implement your report problem functionality
-    router.push("/report-problem")
-    toast.info('Report problem page loading');
+    router.push("/support/report");
   };
 
   // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setApplicationMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
+  // Close dropdown when clicking outside
+  // (No longer needed as setApplicationMenuOpen is removed)
   return (
     <header className="sticky top-0 flex w-full bg-white border-gray-200 z-99999 dark:border-gray-800 dark:bg-gray-900 lg:border-b">
       <div className="flex flex-col items-center justify-between grow lg:flex-row lg:px-6">
@@ -98,51 +110,76 @@ const AppHeader: React.FC = () => {
             onClick={handleToggle}
             aria-label="Toggle Sidebar"
           >
-            {/* ... existing toggle icons ... */}
+            <Menu className="w-5 h-5" />
           </button>
 
           {/* Mobile logo */}
           <Link href="/" className="lg:hidden">
             <Image
               src="/images/logo/Site-Logo.png"
-              alt="Sendexa Logo"
+              alt="D-Rush Lodge Logo"
               width={154}
               height={32}
               className="dark:hidden"
             />
             <Image
               src="/images/logo/Site-Logo.png"
-              alt="Sendexa Logo"
+              alt="D-Rush Lodge Logo"
               width={154}
               height={32}
               className="hidden dark:block"
             />
           </Link>
 
-          {/* Mobile menu button */}
-          <button
-            onClick={toggleApplicationMenu}
-            className="flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
-          >
-            {/* ... existing dots icon ... */}
-          </button>
-
-          {/* Desktop search (empty) */}
-          <div className="hidden lg:block">
-            <form>
-              <div className="relative"></div>
+          {/* Desktop search */}
+          <div className="hidden lg:block flex-1 max-w-md mx-4">
+            <form onSubmit={handleSearch} className="relative">
+              <Input
+                type="search"
+                placeholder="Search bookings, rooms..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </form>
           </div>
-        </div>
 
-        {/* Profile dropdown section */}
-        <div
-          className={`${
-            isApplicationMenuOpen ? "flex" : "hidden"
-          } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
-          ref={dropdownRef}
-        >
-          <div className="flex items-center gap-4">
+          {/* Right side actions */}
+          <div className="flex items-center gap-2">
+            {/* Theme toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="hidden lg:flex"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </Button>
+
+            {/* Notifications */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle>Notifications</SheetTitle>
+                </SheetHeader>
+                <div className="mt-4">
+                  <p className="text-sm text-gray-500">No new notifications</p>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            {/* Profile dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 focus:outline-none">
@@ -157,39 +194,31 @@ const AppHeader: React.FC = () => {
                   </span>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-48" align="end">
+              <DropdownMenuContent className="w-56" align="end">
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    <p className="font-medium">{profile.full_name || 'User'}</p>
+                    <p className="w-[200px] truncate text-sm text-muted-foreground">
+                      {profile.email}
+                    </p>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push('/settings/profile')}>
+                  <User className="w-4 h-4 mr-2" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/settings/security')}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleReportProblem}>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    />
-                  </svg>
+                  <Bell className="w-4 h-4 mr-2" />
                   Report Problem
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
+                  <LogOut className="w-4 h-4 mr-2" />
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>

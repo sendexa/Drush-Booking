@@ -36,50 +36,30 @@ export default function SignupForm() {
     }
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    try {
-      // First sign up the user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          data: {
-            full_name: values.fullName
-          }
-        }
-      })
+  
 
-      if (authError) {
-        toast.error('Signup failed', {
-          description: authError.message
-        })
-        return
-      }
-
-      // Then create the profile in the profiles table
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            full_name: values.fullName,
-            email: values.email
-          })
-
-        if (profileError) {
-          toast.error('Profile creation failed', {
-            description: profileError.message
-          })
-          return
+async function onSubmit(values: z.infer<typeof formSchema>) {
+  try {
+    const { error } = await supabase.auth.signUp({
+      email: values.email,
+      password: values.password,
+      options: {
+        data: {
+          full_name: values.fullName
         }
       }
+    });
 
-      toast.success('Account created successfully!')
-      router.push('/login')
-    } catch {
-      toast.error('An unexpected error occurred')
-    }
+    if (error) throw error;
+
+    toast.success('Account created successfully! Check your email for confirmation.');
+    router.push('/login');
+  } catch (error) {
+    toast.error('Signup failed', {
+      description: error instanceof Error ? error.message : 'An unexpected error occurred'
+    });
   }
+}
 
   return (
     <Form {...form}>

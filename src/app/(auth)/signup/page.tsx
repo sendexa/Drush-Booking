@@ -1,5 +1,5 @@
 // app/signup/page.tsx
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/supabase/client'
 import { redirect } from 'next/navigation'
 import SignupForm from '@/components/auth/SignupForm'
 

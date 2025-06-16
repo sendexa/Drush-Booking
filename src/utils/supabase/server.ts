@@ -1,9 +1,45 @@
+// // utils/supabase/server.ts
+// import { createServerClient, type CookieOptions } from '@supabase/ssr'
+// import { cookies } from 'next/headers'
+
+// export async function createClient() {
+//    const cookieStore = await cookies()
+
+//   return createServerClient(
+//     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+//     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+//     {
+//       cookies: {
+//         get(name: string) {
+//           return cookieStore.get(name)?.value
+//         },
+//         set(name: string, value: string, options: CookieOptions) {
+//           try {
+//             cookieStore.set({ name, value, ...options })
+//           } catch {
+//             // Handle error if cookies can't be set
+//           }
+//         },
+//         remove(name: string, options: CookieOptions) {
+//           try {
+//             cookieStore.set({ name, value: '', ...options })
+//           } catch {
+//             // Handle error if cookies can't be removed
+//           }
+//         },
+//       },
+//     }
+//   )
+// }
+
 // utils/supabase/server.ts
+'use server'
+
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export async function createClient() {
-  const cookieStore = await cookies()
+export async function createServerSideClient() {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,23 +47,23 @@ export async function createClient() {
     {
       cookies: {
         get(name: string) {
-          return cookieStore.get(name)?.value
+          return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value, ...options })
+            cookieStore.set({ name, value, ...options });
           } catch {
             // Handle error if cookies can't be set
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value: '', ...options })
+            cookieStore.set({ name, value: '', ...options });
           } catch {
             // Handle error if cookies can't be removed
           }
         },
       },
     }
-  )
+  );
 }

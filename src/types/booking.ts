@@ -20,28 +20,47 @@ export type BookingStatus = 'pending' | 'confirmed' | 'cancelled'
 //   special_requests?: string | null
 // }
 
+export type Booking = {
+  id: string;
+  user_id: string;
+  room_id: string;
+  room_type: string;
+  check_in_date: string;
+  check_out_date: string;
+  guests_count: number;
+  total_price: number;
+  status: string;
+  special_requests?: string;
+  created_at: string;
+  updated_at: string;
+  // Add the rooms property to match the Supabase join
+  rooms?: { image_urls: string[] }[] | null;
+  // ...other properties
+  guests: number
+};
+
 
 // types/booking.ts
-export interface Booking {
-  id: string
-  user_id: string
-  room_id: string
-  room_type: string
-  check_in_date: string
-  check_out_date: string
-  guests: number
-  total_price: number
-  status: 'confirmed' | 'pending' | 'cancelled'
-  special_requests?: string | null
-  created_at: string
-  updated_at?: string | null
-}
+// export interface Booking {
+//   id: string
+//   user_id: string
+//   room_id: string
+//   room_type: string
+//   check_in_date: string
+//   check_out_date: string
+//   guests: number
+//   total_price: number
+//   status: 'confirmed' | 'pending' | 'cancelled'
+//   special_requests?: string | null
+//   created_at: string
+//   updated_at?: string | null
+// }
 
-export interface BookingWithRoom extends Booking {
-  rooms: {
-    image_urls: string[]
-  } | null
-}
+// export interface BookingWithRoom extends Booking {
+//   rooms: {
+//     image_urls: string[]
+//   } | null
+// }
 
 /**
  * Form data for creating/updating a booking

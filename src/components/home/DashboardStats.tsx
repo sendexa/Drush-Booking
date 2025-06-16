@@ -1,48 +1,70 @@
 // components/DashboardStats.tsx
+import { Calendar, Clock, XCircle, TrendingUp } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
 interface Stats {
   totalBookings: number | null
   upcomingBookings: number | null
   cancelledBookings: number | null
+  totalSpent: number | null
 }
 
 export default function DashboardStats({ stats }: { stats: Stats }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
       <StatCard 
         title="Total Bookings" 
         value={stats.totalBookings || 0} 
-        icon="calendar" 
+        icon={Calendar}
+        description="All time bookings"
       />
       <StatCard 
         title="Upcoming Stays" 
         value={stats.upcomingBookings || 0} 
-        icon="clock" 
+        icon={Clock}
+        description="Future reservations"
       />
       <StatCard 
         title="Cancellations" 
         value={stats.cancelledBookings || 0} 
-        icon="x-circle" 
+        icon={XCircle}
+        description="Cancelled bookings"
+      />
+      <StatCard 
+        title="Total Spent" 
+        value={`$${stats.totalSpent?.toFixed(2) || '0.00'}`} 
+        icon={TrendingUp}
+        description="All time spending"
       />
     </div>
   )
 }
 
-// StatCard component remains the same
-
-// StatCard component remains the same
-
-function StatCard({ title, value, icon }: { title: string; value: number; icon: string }) {
+function StatCard({ 
+  title, 
+  value, 
+  icon: Icon, 
+  description 
+}: { 
+  title: string
+  value: number | string
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  description: string
+}) {
   return (
-    <div className="bg-white rounded-lg p-4 shadow">
-      <div className="flex items-center">
-        <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
-          <span className={`icon-${icon}`} aria-hidden="true"></span>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
-        </div>
-      </div>
-    </div>
-  );
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">
+          {title}
+        </CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        <p className="text-xs text-muted-foreground">
+          {description}
+        </p>
+      </CardContent>
+    </Card>
+  )
 }

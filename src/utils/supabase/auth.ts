@@ -1,5 +1,5 @@
 // utils/supabase/auth.ts
-import { createClient } from './server'
+import { createClient } from './client'
 
 export async function getCurrentUser() {
   const supabase = await createClient()
