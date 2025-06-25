@@ -1,33 +1,8 @@
-// middleware.ts
-import { createClient } from '@/utils/supabase/client'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { updateSession } from "@/lib/supabase/middleware";
+import { type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Define protected routes
-  const protectedRoutes = ['/book', '/my-bookings', '/settings']
-  const isProtectedRoute = protectedRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  )
-
-  // Define auth routes
-  const authRoutes = ['/login', '/signup']
-  const isAuthRoute = authRoutes.includes(request.nextUrl.pathname)
-
-  // Redirect to login if trying to access protected route without auth
-  if (isProtectedRoute && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // Redirect to dashboard if logged in and trying to access auth route
-  if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
-
-  return NextResponse.next()
+  return await updateSession(request);
 }
 
 export const config = {
@@ -37,7 +12,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
-}
+};
